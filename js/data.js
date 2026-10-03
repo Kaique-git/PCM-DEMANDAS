@@ -1,26 +1,30 @@
+// data.js
 // ============================================================
-// data.js — CONFIGURAÇÃO DO FIREBASE (COLE SUAS CREDENCIAIS AQUI)
-// Console do Firebase > Configurações do projeto > Seus apps > Configuração do SDK Web
-// ⚠️ Configure as regras de segurança do Firestore no console do Firebase.
+// Configuração do Firebase — PCM Manutenção
 // ============================================================
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY_AQUI",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO_ID",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyA_L1rDTx9mUtPrjfqr7O-1mLEjVbCQglw",
+  authDomain: "pc-demandas.firebaseapp.com",
+  projectId: "pc-demandas",
+  storageBucket: "pc-demandas.firebasestorage.app",
+  messagingSenderId: "950455669346",
+  appId: "1:950455669346:web:1f1c354073fce3b94eb73b",
+  measurementId: "G-ZFVJB6T0EW"
 };
 
-// Inicializa o Firebase se houver credenciais; caso contrário, o app roda em modo local.
 window.db = null;
 window.firebaseAtivo = false;
-if (firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("SUA_") && typeof firebase !== "undefined") {
+
+(function initFirebase() {
+  const semCredencial = !firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith("SUA_");
+  if (semCredencial) { console.warn("Firebase não configurado — modo local."); return; }
+  if (typeof firebase === "undefined") {
+    console.error("SDK do Firebase não carregado. Verifique as tags <script> compat no index.html ANTES de data.js.");
+    return;
+  }
   try {
     firebase.initializeApp(firebaseConfig);
     window.db = firebase.firestore();
     window.firebaseAtivo = true;
-  } catch (e) {
-    console.error("Falha ao iniciar o Firebase:", e);
-  }
-}
+  } catch (e) { console.error("Falha ao iniciar o Firebase:", e); }
+})();
