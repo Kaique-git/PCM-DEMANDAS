@@ -37,23 +37,31 @@
       <div class="kpi ok"><span class="kpi-ico">✅</span><span id="kpiMes">0</span><b>Concluídas no Mês</b><small>Finalizadas no mês atual</small></div>
     </div>
     <div class="card filtros">
-      <input id="fBusca" placeholder="🔍 Buscar por Título, Descrição ou Responsável">
-      <div class="grid-filtros">
-        <div><label>Status:</label><select id="fStatus"></select></div>
-        <div><label>Responsável:</label><select id="fResp"></select></div>
-        <div><label>Setor / Especialidade:</label><select id="fSetor"></select></div>
-        <div><label>Filtro de Prazo:</label><select id="fPrazo">
-          <option value="">Todos</option><option value="atrasadas">Atrasadas</option>
-          <option value="hoje">Vence hoje</option><option value="semana">Esta semana</option>
-          <option value="prazo">No prazo</option></select></div>
-        <div><label>Anexos:</label><select id="fAnexos">
-          <option value="">Todos</option><option value="com">Com anexo</option><option value="sem">Sem anexo</option></select></div>
-        <div><label>Ordenar por:</label><select id="fOrdenar">
-          <option value="prazo">Prazo</option><option value="prioridade">Prioridade</option>
-          <option value="recente">Mais Recente</option><option value="titulo">Título</option></select></div>
-        <div><label>Prioridade:</label><select id="fPrior"></select></div>
-        <div class="datas"><label>Prazo entre:</label><input type="date" id="fDe"><span>até</span><input type="date" id="fAte"><button onclick="limparDatas()">Limpar Datas</button></div>
+      <div class="filtros-head">
+        <button id="btnToggleFiltros" onclick="toggleFiltros()">🔍 Filtros</button>
+        <span class="contador" id="fContador">Exibindo 0 demandas</span>
+        <button onclick="resetFiltros()">🔄 Restaurar Filtros</button>
       </div>
+      <div id="painelFiltros" hidden>
+        <input id="fBusca" placeholder="🔍 Buscar por Título, Descrição ou Responsável">
+        <div class="grid-filtros">
+          <div><label>Status:</label><select id="fStatus"></select></div>
+          <div><label>Prioridade:</label><select id="fPrior"></select></div>
+          <div><label>Responsável:</label><select id="fResp"></select></div>
+          <div><label>Setor:</label><select id="fSetor"></select></div>
+          <div><label>Filtro de Prazo:</label><select id="fPrazo">
+            <option value="">Todos</option><option value="atrasadas">Atrasadas</option>
+            <option value="hoje">Vence hoje</option><option value="semana">Esta semana</option>
+            <option value="prazo">No prazo</option></select></div>
+          <div><label>Anexos:</label><select id="fAnexos">
+            <option value="">Todos</option><option value="com">Com anexo</option><option value="sem">Sem anexo</option></select></div>
+          <div><label>Ordenar por:</label><select id="fOrdenar">
+            <option value="prazo">Prazo</option><option value="prioridade">Prioridade</option>
+            <option value="recente">Mais Recente</option><option value="titulo">Título</option></select></div>
+          <div class="datas"><label>Prazo entre:</label><input type="date" id="fDe"><span>até</span><input type="date" id="fAte"><button onclick="limparDatas()">Limpar</button></div>
+        </div>
+      </div>
+    </div>
       <div class="linha-filtros">
         <span class="contador" id="fContador">Exibindo 0 demandas</span>
         <button onclick="resetFiltros()">🔄 Restaurar Filtros Padrão</button>

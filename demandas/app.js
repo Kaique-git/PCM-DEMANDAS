@@ -545,6 +545,34 @@ function barraRow(rotulo, val, max, cor) {
     <div class="barra-fundo" title="${val}"><div class="barra" style="width:${pct}%;background:${cor}"></div></div>
     <span class="barra-valor">${val}</span></div>`;
 }
+function donut(titulo, pares, corFn) {
+  const total = pares.reduce((s, p) => s + p[1], 0);
+  const C = 2 * Math.PI * 60; // circunferência do anel (r=60)
+  let off = 0;
+  const segs = pares.map(([k, v]) => {
+    const frac = total ? v / total : 0;
+    const seg = `<circle r="60" cx="80" cy="80" fill="none" stroke="${corFn(k)}" stroke-width="26"
+      stroke-dasharray="${frac * C} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 80 80)"></circle>`;
+    off += frac * C;
+    return seg;
+  }).join('');
+  const legenda = pares.map(([k, v]) =>
+    `<div class="leg-item"><span class="leg-dot" style="background:${corFn(k)}"></span>
+     <span class="leg-nome" title="${esc(k)}">${esc(k)}</span>
+     <span class="leg-val">${v} · ${total ? Math.round(v / total * 100) : 0}%</span></div>`).join('');
+  return `<div class="grafico-card"><h3>${titulo}</h3>
+    <div class="donut-wrap">
+      <div class="donut-box"><svg viewBox="0 0 160 160">${segs}</svg>
+        <div class="donut-centro"><b>${total}</b><small>demandas</small></div></div>
+      <div class="donut-legenda">${legenda}</div>
+    </div></div>`;
+}
+function toggleFiltros() {
+  const p = $('#painelFiltros'); if (!p) return;
+  const ocultou = p.toggleAttribute('hidden');
+  const b = $('#btnToggleFiltros');
+  if (b) b.textContent = ocultou ? '🔍 Filtros' : '✖️ Fechar Filtros';
+}
 function renderGraficos() {
   const ind = $('#gIndicadores'), wrap = $('#gContainer');
   if (!ind || !wrap) return;
@@ -553,6 +581,85 @@ function renderGraficos() {
     wrap.innerHTML = '<div class="vazio"><h3>Sem dados para gráficos</h3></div>';
     return;
   }
+  const total = demandas.length, atras = demandas.filter(estaAtrasada).length;
+  const concl = demandas.filter(isConcluida);
+  const comPrazo = concl.filter(d => d.prazo);
+  const noPrazo = comPrazo.filter(d => d.concluidaEm && d.concluidaEm <= d.prazo).length;
+  const cumpr = comPrazo.length ? Math.round(noPrazo / comPrazo.length * 100) : 0;
+  const diasArr = concl.filter(d => d.criadaEm && d.concluidaEm)
+    .map(d => Math.max(0, Math.round((new Date(d.concluidaEm + 'T12:00:00') - new Date(d.criadaEm + 'T12:00:00')) / 86400000)));
+  const media = diasArr.length ? Math.round(diasArr.reduce((a, b) => a + b, 0) / diasArr.length) : 0;
+  const semAnexo = demandas.filter(d => !(d.anexos && d.anexos.length)).length;
+  ind.innerHTML = `
+    <div class="kpi"><span>${cumpr}%</span><small>Cumprimento de Prazo</small></div>
+    <div class="kpi"><span>${media} dias</span><small>Média de Conclusão</small></div>
+    <div class="kpi atras"><span>${atras}</span><small>Atrasadas Agora</small></div>
+    <div class="kpi"><span>${semAnexo}</span><small>Sem Anexo / Evidência</small></div>`;
+  const contar = chave => {
+    const m = {};
+    demandas.forEach(d => { const k = d[chave] || '—'; m[k] = (m[k] || 0) + 1; });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  };
+  /* --- Roscas com porcentagem --- */
+  const pend = demandas.filter(isPendente).length;
+  const canc = demandas.filter(isCancelada).length;
+  const paresConcl = [];
+  if (concl.length) paresConcl.push(['Concluídas', concl.length]);
+  if (pend) paresConcl.push(['Pendentes', pend]);
+  if (canc) paresConcl.push(['Canceladas', canc]);
+  const roscas = `
+    <div class="grafico-grid">
+      ${donut('📊 Demandas por Status', contar('status'), k => corOpt(k, 'status'))}
+      ${donut('🔺 Demandas por Prioridade', contar('prior'), k => corOpt(k, 'prioridade'))}
+      ${donut('🎯 Taxa de Conclusão', paresConcl.length ? paresConcl : [['Sem dados', 1]],
+        k => k === 'Concluídas' ? '#22c55e' : k === 'Pendentes' ? '#3b82f6' : '#94a3b8')}
+    </div>`;
+  const bloco = (titulo, pares, cor) => {
+    const max = Math.max(...pares.map(p => p[1]), 1);
+    return `<div class="grafico-card"><h3>${titulo}</h3>${pares.map(([k, v]) => barraRow(k, v, max, cor)).join('')}</div>`;
+  };
+  const porResp = contar('resp');
+  const maxResp = Math.max(...porResp.map(p => p[1]), 1);
+  const linhasResp = porResp.map(([k, v]) => {
+    const atr = demandas.filter(d => (d.resp || '—') === k && estaAtrasada(d)).length;
+    const pct = Math.round(v / maxResp * 100), pctA = Math.round(atr / maxResp * 100);
+    return `<div class="barra-linha"><span>${esc(k)}</span>
+      <div><div class="barra-fundo" title="${v}"><div class="barra" style="width:${pct}%;background:#3b82f6"></div></div>
+      ${atr ? `<div class="barra-seg" style="width:${pctA}%"></div>` : ''}</div>
+      <span class="barra-valor">${v}</span></div>`;
+  }).join('');
+  const meses = [];
+  const base = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const dt = new Date(base.getFullYear(), base.getMonth() - i, 1);
+    meses.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
+  }
+  const criadasMes = meses.map(m => demandas.filter(d => (d.criadaEm || '').startsWith(m)).length);
+  const concMes = meses.map(m => demandas.filter(d => (d.concluidaEm || '').startsWith(m)).length);
+  const maxMes = Math.max(...criadasMes, ...concMes, 1);
+  const barrasMes = meses.map((m, i) => {
+    const hC = Math.max(Math.round(criadasMes[i] / maxMes * 100), criadasMes[i] ? 6 : 2);
+    const hK = Math.max(Math.round(concMes[i] / maxMes * 100), concMes[i] ? 6 : 2);
+    const rot = m.slice(5) + '/' + m.slice(2, 4);
+    return `<div class="grupo-mes" title="${rot}: ${criadasMes[i]} criadas, ${concMes[i]} concluídas">
+      <div class="col-mes" style="height:${hK}%;background:#22c55e">${concMes[i] || ''}</div>
+      <div class="col-mes" style="height:${hC}%;background:#3b82f6">${criadasMes[i] || ''}</div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML = `
+    ${roscas}
+    <div class="grafico-grid">
+      ${bloco('👤 Demandas por Responsável <small style="color:var(--muted)">(vermelho = atrasadas)</small>', porResp, '#3b82f6')}
+      ${bloco('🏭 Demandas por Setor', contar('setor'), '#22c55e')}
+    </div>
+    <div class="grafico-card"><h3>📅 Criadas vs Concluídas — últimos 6 meses</h3>
+      <div class="barras-mes">${barrasMes}</div>
+      <div class="legenda-mes">
+        <span class="legenda-item"><span class="legenda-dot" style="background:#3b82f6"></span> Criadas</span>
+        <span class="legenda-item"><span class="legenda-dot" style="background:#22c55e"></span> Concluídas</span>
+      </div>
+    </div>`;
+}
   const total = demandas.length, atras = demandas.filter(estaAtrasada).length;
   /* --- KPIs de desempenho (versão do Jhonatan) --- */
   const concl = demandas.filter(isConcluida);
@@ -619,7 +726,6 @@ function renderGraficos() {
         <span class="legenda-item"><span class="legenda-dot" style="background:#22c55e"></span> Concluídas</span>
       </div>
     </div>`;
-}
 
 /* ================= 13. ABA CADASTROS ================= */
 function renderCadastros() {
